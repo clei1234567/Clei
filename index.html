@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Generador QR Pro</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin-top: 30px; }
+    #linkInput { width: 300px; padding: 10px; }
+    button { padding: 10px 15px; cursor: pointer; }
+    #qrcode { margin-top: 20px; display: inline-block; }
+    #stats { margin-top: 15px; font-size: 14px; color: #333; }
+    #historyPanel { margin-top: 30px; border-top: 1px solid #ccc; padding-top: 20px; display: none; }
+    .history-item { margin: 5px 0; cursor: pointer; color: blue; text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+  <h2>Generador de Código QR</h2>
+  <input type="text" id="linkInput" placeholder="Pega tu enlace aquí (ej. https://google.com)">
+  <button onclick="procesarQR()">Generar / Consultar</button>
+  <button onclick="toggleHistorial()">🕒</button>
+
+  <div id="qrcode"></div>
+  <div id="stats"></div>
+
+  <div id="historyPanel">
+    <h3>Historial de Códigos</h3>
+    <div id="historyList"></div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script>
+    let historial = JSON.parse(localStorage.getItem('qrHistorial')) || [];
+
+    function procesarQR() {
+      const linkInput = document.getElementById('linkInput').value.trim();
+      if (!linkInput) {
+        alert("Por favor, ingresa un enlace.");
+        return;
+      }
+
+      // Asegurar que tenga http/https para evitar errores de carga
+      const link = linkInput.startsWith('http') ? linkInput : 'https://' + linkInput;
+
+      const contenedorQR = document.getElementById('qrcode');
+      const contenedorStats = document.getElementById('stats');
+
+      contenedorQR.innerHTML = "";
+      new QRCode(contenedorQR, link);
+
+      let itemExistente = historial.find(item => item.link === link);
+      let fechaCreacion;
+      let totalEscaneos;
+
+      if (itemExistente) {
+        fechaCreacion = itemExistente.fecha;
+        itemExistente.escaneos += 1;
+        totalEscaneos = itemExistente.escaneos;
+      } else {
+        fechaCreacion = new Date().toLocaleString();
+        totalEscaneos = 1;
+        historial.push({ link: link, fecha: fechaCreacion, escaneos: totalEscaneos });
+      }
+
+      localStorage.setItem('qrHistorial', JSON.stringify(historial));
+
+      contenedorStats.innerHTML = `
+        <p><strong>Enlace:</strong> ${link}</p>
+        <p><strong>Fecha de creación:</strong> ${fechaCreacion}</p>
+        <p><strong>Veces consultado:</strong> ${totalEscaneos}</p>
+      `;
+    }
+
+    function toggleHistorial() {
+      const panel = document.getElementById('historyPanel');
+      const lista = document.getElementById('historyList');
+      if (panel.style.display === "none" || panel.style.display === "") {
+        panel.style.display = "block";
+        lista.innerHTML = "";
+        historial.forEach(item => {
+          let div = document.createElement('div');
+          div.className = 'history-item';
+          div.innerText = `${item.link} (Creado: ${item.fecha})`;
+          div.onclick = () => cargarDesdeHistorial(item.link);
+          lista.appendChild(div);
+        });
+      } else {
+        panel.style.display = "none";
+      }
+    }
+
+    function cargarDesdeHistorial(link) {
+      document.getElementById('linkInput').value = link;
+      procesarQR();
+    }
+  </script>
+</body>
+</html>
