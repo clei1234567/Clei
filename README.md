@@ -1,2 +1,2 @@
-# Clei generador
+# Generator Clei
 Generador de QR
